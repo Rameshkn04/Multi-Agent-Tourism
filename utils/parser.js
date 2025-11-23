@@ -1,94 +1,93 @@
 /**
- * Parser utility to extract place name and user intent from natural language input
+ * Parser utility to extract place name and user intent
  */
 
+/* ------------------------- PLACE EXTRACTION ------------------------- */
 /**
- * Extract place name from user input
- * Looks for patterns like "going to [place]", "visit [place]", "in [place]", etc.
- * @param {string} input - User's natural language input
- * @returns {string|null} - Extracted place name or null
+ * Extracts a place name from user input using strong NLP patterns.
+ * Handles: "in Bangalore", "going to Paris", "visit New York", etc.
  */
 function extractPlace(input) {
-  if (!input || typeof input !== 'string') {
-    return null;
-  }
+  if (!input || typeof input !== "string") return null;
 
-  const lowerInput = input.toLowerCase();
-  
-  // Common patterns for place mentions
+  // Clean input
+  const cleaned = input.replace(/\s+/g, " ").trim();
+
+  // Strong regex patterns for typical travel queries
   const patterns = [
-    /going to (?:go to )?([A-Z][a-zA-Z\s]+?)(?:,|\.|$|let|what|and)/i,
-    /visit ([A-Z][a-zA-Z\s]+?)(?:,|\.|$|let|what|and)/i,
-    /in ([A-Z][a-zA-Z\s]+?)(?:,|\.|$|let|what|and)/i,
-    /to ([A-Z][a-zA-Z\s]+?)(?:,|\.|$|let|what|and)/i,
+    /\bgoing to\s+([A-Za-z][A-Za-z\s]+?)(?=[?.!,]|$)/i,
+    /\bgo to\s+([A-Za-z][A-Za-z\s]+?)(?=[?.!,]|$)/i,
+    /\bvisit\s+([A-Za-z][A-Za-z\s]+?)(?=[?.!,]|$)/i,
+    /\btrip to\s+([A-Za-z][A-Za-z\s]+?)(?=[?.!,]|$)/i,
+    /\bin\s+([A-Za-z][A-Za-z\s]+?)(?=[?.!,]|$)/i,
+    /\bto\s+([A-Za-z][A-Za-z\s]+?)(?=[?.!,]|$)/i
   ];
 
   for (const pattern of patterns) {
-    const match = input.match(pattern);
+    const match = cleaned.match(pattern);
     if (match && match[1]) {
-      const place = match[1].trim();
-      // Filter out common words that might be captured
-      if (place.length > 2 && !['the', 'my', 'your', 'their'].includes(place.toLowerCase())) {
-        return place;
-      }
+      let place = match[1].trim();
+
+      // Remove punctuation
+      place = place.replace(/[?.!,]/g, "").trim();
+
+      // Exclude irrelevant words (bug fix)
+      const banned = ["what", "where", "who", "is", "the", "temperature"];
+      if (banned.includes(place.toLowerCase())) continue;
+
+      return place;
     }
   }
 
-  // Fallback: try to find capitalized words (likely place names)
-  const words = input.split(/\s+/);
+  /* ---- Fallback: Detect multi-word capitalized places ---- */
+  const words = cleaned.split(" ");
+  let place = "";
+
   for (let i = 0; i < words.length; i++) {
-    const word = words[i].replace(/[.,!?;:]$/, '');
-    if (word[0] === word[0]?.toUpperCase() && word.length > 2) {
-      // Check if it's followed by more capitalized words (multi-word place names)
-      let place = word;
+    if (/^[A-Z][a-z]+$/.test(words[i])) {
+      place = words[i];
       let j = i + 1;
-      while (j < words.length && words[j][0] === words[j][0]?.toUpperCase()) {
-        place += ' ' + words[j].replace(/[.,!?;:]$/, '');
+
+      while (j < words.length && /^[A-Z][a-z]+$/.test(words[j])) {
+        place += " " + words[j];
         j++;
       }
-      if (place.length > 2) {
-        return place;
-      }
+
+      return place.trim();
     }
   }
 
   return null;
 }
 
+/* ---------------------------- INTENT ---------------------------- */
 /**
- * Determine user intent from input
- * @param {string} input - User's natural language input
- * @returns {Object} - { wantsWeather: boolean, wantsPlaces: boolean }
+ * Determines whether the user wants weather, places, or both.
  */
 function extractIntent(input) {
-  if (!input || typeof input !== 'string') {
+  if (!input || typeof input !== "string") {
     return { wantsWeather: false, wantsPlaces: false };
   }
 
-  const lowerInput = input.toLowerCase();
+  const lower = input.toLowerCase();
 
-  // Weather-related keywords
   const weatherKeywords = [
-    'temperature', 'temp', 'weather', 'rain', 'raining', 'rainfall',
-    'forecast', 'climate', 'hot', 'cold', 'sunny', 'cloudy'
+    "temperature", "temp", "weather", "rain", "raining",
+    "forecast", "climate", "hot", "cold", "sunny", "cloudy"
   ];
 
-  // Places/tourism-related keywords
   const placesKeywords = [
-    'places', 'place', 'attractions', 'attraction', 'visit', 'tourist',
-    'sightseeing', 'sights', 'see', 'explore', 'tour', 'tourism', 'plan'
+    "places", "place", "attractions", "attraction", "visit",
+    "tourist", "sightseeing", "see", "explore", "tour", "tourism",
+    "plan", "trip"
   ];
 
-  const wantsWeather = weatherKeywords.some(keyword => lowerInput.includes(keyword));
-  const wantsPlaces = placesKeywords.some(keyword => lowerInput.includes(keyword));
+  const wantsWeather = weatherKeywords.some(k => lower.includes(k));
+  const wantsPlaces = placesKeywords.some(k => lower.includes(k));
 
-  // If neither is explicitly mentioned but user mentions "plan" or "trip", assume places
+  /* Smart fallback logic */
   if (!wantsWeather && !wantsPlaces) {
-    if (lowerInput.includes('plan') || lowerInput.includes('trip')) {
-      return { wantsWeather: false, wantsPlaces: true };
-    }
-    // If only place is mentioned without specific intent, default to places
-    if (extractPlace(input)) {
+    if (lower.includes("plan") || lower.includes("trip")) {
       return { wantsWeather: false, wantsPlaces: true };
     }
   }
@@ -96,18 +95,11 @@ function extractIntent(input) {
   return { wantsWeather, wantsPlaces };
 }
 
-/**
- * Main parser function
- * @param {string} input - User's natural language input
- * @returns {Object} - { place: string|null, wantsWeather: boolean, wantsPlaces: boolean }
- */
+/* ---------------------------- MAIN ---------------------------- */
 function parseInput(input) {
-  const place = extractPlace(input);
-  const intent = extractIntent(input);
-
   return {
-    place,
-    ...intent
+    place: extractPlace(input),
+    ...extractIntent(input)
   };
 }
 
@@ -116,6 +108,3 @@ module.exports = {
   extractPlace,
   extractIntent
 };
-
-
-
