@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: multi-agent-tourism
+    env: node
+    region: frankfurt
+    plan: free
+    branch: main
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    autoDeploy: true
