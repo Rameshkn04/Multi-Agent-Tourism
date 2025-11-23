@@ -262,6 +262,121 @@ Health check endpoint to verify the server is running.
 
 ---
 
+## 🔍 How to Test the Deployed App (Important for Evaluators)
+
+This project is a backend API, not a webpage.  
+Opening the root URL will show:
+
+```json
+{"error":"Route not found"}
+```
+
+This is expected.
+
+### ✔ Health Check (works in any browser)
+
+https://multi-agent-tourism-r63s.onrender.com/health
+
+### ✔ Main API Endpoint (POST Request)
+
+POST https://multi-agent-tourism-r63s.onrender.com/api/ask
+
+**Quick Test with PowerShell (Human-Readable Output):**
+
+Use the provided test script for beautiful, formatted output:
+
+```powershell
+# Run all test cases with formatted output
+.\test-deployed-api.ps1
+
+# Or test a single query
+.\quick-test.ps1 "I'm going to go to Bangalore, let's plan my trip."
+```
+
+**Manual PowerShell Test (One-liner):**
+
+```powershell
+$body = @{ query = "I'm going to go to Bangalore, let's plan my trip." } | ConvertTo-Json
+$response = Invoke-WebRequest -Uri "https://multi-agent-tourism-r63s.onrender.com/api/ask" -Method POST -Body $body -ContentType "application/json"
+$json = $response.Content | ConvertFrom-Json
+Write-Host "Status: $($response.StatusCode)" -ForegroundColor Green
+Write-Host "Success: $($json.success)" -ForegroundColor $(if($json.success){"Green"}else{"Red"})
+Write-Host "`nMessage:" -ForegroundColor Cyan
+Write-Host ($json.message -replace "\\n", "`n") -ForegroundColor White
+```
+
+### ⭐ Sample Test Bodies
+
+#### 1. Tourist Places Only
+
+```json
+{
+  "query": "I'm going to go to Bangalore, let's plan my trip."
+}
+```
+
+#### 2. Weather Only
+
+```json
+{
+  "query": "I'm going to Bangalore, what is the temperature there?"
+}
+```
+
+#### 3. Weather + Places
+
+```json
+{
+  "query": "I'm going to Bangalore, what is the temperature there? And what places can I visit?"
+}
+```
+
+#### 4. Invalid / Unknown Place
+
+```json
+{
+  "query": "I'm going to go to XyzInvalidPlace123, let's plan my trip."
+}
+```
+
+Expected response:
+
+```
+I don't know this place exists
+```
+
+### 📸 Screenshots of Working Deployed App
+
+#### Health Check Endpoint (Browser)
+![Health Check](./images/deployed-health-check.png)
+*Health check endpoint showing the API is running*
+
+#### Postman/API Testing Tool Screenshots
+
+**1. Tourist Places Request & Response:**
+![Places API Test](./images/deployed-places-test.png)
+*Example: Testing the places endpoint with Postman/Thunder Client*
+
+**2. Weather Request & Response:**
+![Weather API Test](./images/deployed-weather-test.png)
+*Example: Testing the weather endpoint*
+
+**3. Combined Weather + Places Request & Response:**
+![Combined API Test](./images/deployed-combined-test.png)
+*Example: Testing both weather and places in one request*
+
+**4. Error Handling (Invalid Place):**
+![Error Handling Test](./images/deployed-error-test.png)
+*Example: Testing error handling with invalid place name*
+
+> **Note**: Screenshots should show:
+> - The request body (JSON)
+> - The response body (JSON)
+> - Status code (200 OK)
+> - The deployed URL (https://multi-agent-tourism-r63s.onrender.com/api/ask)
+
+---
+
 ## 💻 PowerShell Examples
 
 All examples use PowerShell's `Invoke-WebRequest` cmdlet. The response can be formatted using `ConvertFrom-Json` for better readability.
@@ -468,18 +583,45 @@ Write-Host $json.message
 
 ## 📸 Screenshots & Demo
 
-### Example Responses
+### Local Development Examples
 
 ![Places Response](./images/places-response.png)
-*Example: Tourist places response for Bangalore*
+*Example: Tourist places response for Bangalore (local testing)*
 
 ![Weather Response](./images/weather-response.png)
-*Example: Weather information response*
+*Example: Weather information response (local testing)*
 
 ![Combined Response](./images/combined-response.png)
-*Example: Combined weather and places response*
+*Example: Combined weather and places response (local testing)*
 
-> **Note**: Add your own screenshots to the `images/` directory to showcase the system in action.
+### Deployed App Screenshots
+
+See the [How to Test the Deployed App](#-how-to-test-the-deployed-app-important-for-evaluators) section above for screenshots of the live deployed API.
+
+### How to Take Screenshots
+
+1. **For Health Check:**
+   - Open `https://multi-agent-tourism-r63s.onrender.com/health` in a browser
+   - Take a screenshot showing the JSON response
+
+2. **For API Endpoints (Postman/Thunder Client/Insomnia):**
+   - Set method to `POST`
+   - URL: `https://multi-agent-tourism-r63s.onrender.com/api/ask`
+   - Headers: `Content-Type: application/json`
+   - Body: Use the sample test bodies from above
+   - Take screenshots showing:
+     - Request configuration (URL, method, headers, body)
+     - Response (status code, response body)
+   - Save screenshots as:
+     - `deployed-health-check.png`
+     - `deployed-places-test.png`
+     - `deployed-weather-test.png`
+     - `deployed-combined-test.png`
+     - `deployed-error-test.png`
+
+3. **Save screenshots in the `images/` directory**
+
+> **Note**: Add your screenshots to the `images/` directory to showcase the system in action.
 
 ---
 
@@ -599,7 +741,6 @@ For questions or issues related to this project, please open an issue on GitHub.
 
 <div align="center">
 
-**Built with ❤️ for the Inkle.ai AI Intern Assignment**
 
 [Node.js](https://nodejs.org/) • [Express](https://expressjs.com/) • [Open-Meteo](https://open-meteo.com/) • [Overpass](https://wiki.openstreetmap.org/wiki/Overpass_API) • [Nominatim](https://nominatim.org/)
 
